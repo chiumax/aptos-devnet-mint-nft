@@ -9,6 +9,7 @@ import {
   useMutation,
   useQuery,
 } from "@tanstack/react-query";
+import mintCoin from "./mintCoin";
 
 interface FormData {
   nftName: string;
@@ -18,6 +19,7 @@ interface FormData {
 }
 
 export type NetworkType = "devnet" | "testnet";
+export type AssetType = "nft" | "coin";
 
 const NFTForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -26,13 +28,15 @@ const NFTForm: React.FC = () => {
     id: "",
     recipient: "",
   });
-  const [selectedNetwork, setSelectedNetwork] = useState<"devnet" | "testnet">(
-    "devnet"
-  );
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>("devnet");
+  const [selectedAsset, setSelectedAsset] = useState<AssetType>("nft");
 
   const handleNetworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("hi");
     setSelectedNetwork(event.target.value as NetworkType);
+  };
+
+  const handleAssetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedAsset(event.target.value as AssetType);
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -44,23 +48,31 @@ const NFTForm: React.FC = () => {
   };
 
   const mutation = useMutation({
-    mutationFn: mintNFT,
+    mutationFn: async () => {
+      return selectedAsset === "nft"
+        ? await mintNFT({
+            recipient: formData.recipient,
+            network: selectedNetwork,
+          })
+        : await mintCoin({
+            recipient: formData.recipient,
+            network: selectedNetwork,
+          });
+    },
   });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    // "use server";
     e.preventDefault();
     console.log(formData); // You can handle form submission logic here
 
-    mutation.mutate({
-      recipient: formData.recipient,
-      network: selectedNetwork,
-    });
+    mutation.mutate();
   };
 
   return (
     <div>
       <h2>
-        Mint Aptos NFT <img src="/mail.gif" />
+        Mint Aptos NFT / Coin <img src="/mail.gif" />
       </h2>
       <form onSubmit={handleSubmit} style={{ maxWidth: "350px" }}>
         <div style={{ marginBottom: "10px" }}>
@@ -78,8 +90,33 @@ const NFTForm: React.FC = () => {
           </label>
         </div>
         <fieldset style={{ marginBottom: "10px" }}>
-          <legend>Select a network:</legend>
+          <legend>Select what to mint:</legend>
+          <div>
+            <input
+              type="radio"
+              id="nft"
+              name="nft"
+              value="nft"
+              checked={selectedAsset === "nft"}
+              onChange={handleAssetChange}
+            />
+            <label htmlFor="nft">CHEWY NFT</label>
+          </div>
 
+          <div>
+            <input
+              type="radio"
+              id="coin"
+              name="coin"
+              value="coin"
+              checked={selectedAsset === "coin"}
+              onChange={handleAssetChange}
+            />
+            <label htmlFor="coin">Max Coin</label>
+          </div>
+        </fieldset>
+        <fieldset style={{ marginBottom: "10px" }}>
+          <legend>Select a network:</legend>
           <div>
             <input
               type="radio"
@@ -104,6 +141,14 @@ const NFTForm: React.FC = () => {
             <label htmlFor="testnet">Testnet</label>
           </div>
         </fieldset>
+        {selectedAsset === "coin" && selectedNetwork === "devnet" && (
+          <div style={{ marginBottom: "10px" }}>
+            <p>
+              sorry minting coin is currently <strong>not</strong> available for{" "}
+              <strong>devnet</strong>
+            </p>
+          </div>
+        )}
 
         {/* <div style={{ marginBottom: "10px" }}>
           <label
@@ -202,6 +247,10 @@ const Page = () => {
       <div>
         {" "}
         built brick by brick by <a href="https://blog.chiu.fyi/">chiu.fyi</a>
+        <div>
+          tips:
+          0x9e17437360ef302868607ce277c379406f9ad7313e919ebf89605a4ba9ddc9ec
+        </div>
       </div>
     </div>
   );
